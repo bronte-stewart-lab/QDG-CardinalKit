@@ -21,7 +21,8 @@ enum LocalTaskItem: Int {
          sampleFunCoffeeSurvey,
          sampleFunCoffeeResult,
          sampleCoreMotionAppleWatch,
-         sampleLearnItem
+         sampleLearnItem,
+         QDGTask
     
     /*
      * STEP (2) for each item, what should its
@@ -41,6 +42,8 @@ enum LocalTaskItem: Int {
             return "Coffee Results"
         case .sampleLearnItem:
             return "About CardinalKit"
+        case .QDGTask:
+            return "QDG Task"
         }
     }
     
@@ -61,6 +64,8 @@ enum LocalTaskItem: Int {
             return "ResearchKit Charts"
         case .sampleLearnItem:
             return "Visit cardinalkit.org"
+        case .QDGTask:
+            return "Finger Tapping Exercise"
         }
     }
     
@@ -81,6 +86,8 @@ enum LocalTaskItem: Int {
             return getImage(named: "WatchIcon")
         case .sampleLearnItem:
             return getImage(named: "CKLogoIcon")
+        case .QDGTask:
+            return getImage(named: "WatchIcon")
         default:
             return getImage(named: "SurveyIcon")
         }
@@ -91,7 +98,7 @@ enum LocalTaskItem: Int {
      */
     var section: String {
         switch self {
-        case .sampleResearchKitSurvey, .sampleResearchKitActiveTask:
+        case .sampleResearchKitSurvey, .sampleResearchKitActiveTask, .QDGTask:
             return "Current Tasks"
         case .sampleFunCoffeeSurvey, .sampleFunCoffeeResult:
             return "Your Interests"
@@ -118,6 +125,8 @@ enum LocalTaskItem: Int {
             return AnyView(CoffeeUIView())
         case .sampleLearnItem:
             return AnyView(LearnUIView())
+        case .QDGTask:
+            return AnyView(QDGTaskUIView())
         }
     }
     
