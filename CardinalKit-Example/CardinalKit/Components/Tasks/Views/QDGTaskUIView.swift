@@ -1,41 +1,100 @@
 //
-//  SensorsDemoUIView.swift
+//  QDGTaskUIView.swift
 //  CardinalKit_Example
 //
-//  Created by Santiago Gutierrez on 12/22/20.
-//  Copyright © 2020 CocoaPods. All rights reserved.
+//  Created by Gary Burnett on 8/14/22.
+//  Copyright © 2022 CardinalKit. All rights reserved.
 //
 
 import SwiftUI
 import CardinalKit
 
+struct AddDeviceView: View {
+    
+    @ObservedObject var bleManager: BLEManager
+    @Environment(\.presentationMode) var presentationMode
+    
+    var body: some View {
+        VStack(alignment: .leading) {
+            Text("Searching for Bluetooth Devices").font(.title)
+            
+            List(bleManager.peripherals) { peripheral in
+                HStack {
+                    Text(peripheral.name)
+                    Spacer()
+                    Text(String(peripheral.rssi))
+                }
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    bleManager.connect(peripheral: peripheral.corePeripheral)
+                    presentationMode.wrappedValue.dismiss()
+                }
+            }
+            
+        }.onAppear {
+            print("Add Bluetooth Device Menu Appeared")
+            self.bleManager.peripherals.removeAll()
+            self.bleManager.startScanning()
+        }.onDisappear {
+            print("Add Bluetooth Device Menu Disappeared")
+            self.bleManager.stopScanning()
+        }.padding()
+    }
+}
+
+struct ConnectedDeviceView: View {
+    
+    @ObservedObject var bleManager: BLEManager
+    var peripheral: Peripheral
+    
+    var body: some View {
+        VStack(alignment: .leading) {
+            HStack {
+                Text(peripheral.name)
+                Spacer()
+            }
+            HStack {
+                if (peripheral.heartRate) {
+                    Image(systemName: "suit.heart.fill")
+                }
+                if (peripheral.weight) {
+                    Image(systemName: "scalemass.fill")
+                }
+                if (peripheral.bloodPressure) {
+                    Image(systemName: "arrow.up.heart.fill")
+                }
+                Spacer()
+                
+                Text("\(peripheral.batteryLevel)%")
+                
+                if (peripheral.batteryLevel >= 0 && peripheral.batteryLevel < 20) {
+                    Image(systemName: "battery.0")
+                } else if peripheral.batteryLevel < 40 {
+                    Image(systemName: "battery.25")
+                } else {
+                    Image(systemName: "battery.100")
+                }
+            }
+            
+        }
+        .contentShape(Rectangle())
+        .onTapGesture {
+            print("Click detected")
+            //print(acceptableDeviceCBUUIDList)
+            print(peripheral.services)
+            if peripheral.bloodPressureCharacteristic != nil {
+//                peripheral.corePeripheral.readValue(for: peripheral.bloodPressureCharacteristic!)
+                peripheral.corePeripheral.setNotifyValue(true, for: peripheral.bloodPressureCharacteristic!)
+            }
+//            bleManager.discoverServices(peripheral: peripheral.corePeripheral)
+        }
+    }
+}
+
 struct QDGTaskUIView: View {
     
-    let motionManager = CKCoreMotionManager.shared
-    let timer = CKTimer()
-    
-    @State var isMotionActive = false
-    @State var useAppleWatch = false
-    
-    @ObservedObject var timerDelegate = TimerObservable()
-    
-    fileprivate func motionStart() {
-        guard !isMotionActive else { return }
-        
-        isMotionActive = true
-        motionManager.start()
-        timer.start()
-        // isMotionActive = motionManager.isActive
-    }
-    
-    fileprivate func motionStop() {
-        guard isMotionActive else { return }
-        
-        isMotionActive = false
-        motionManager.stop()
-        timer.stop()
-        // isMotionActive = motionManager.isActive
-    }
+    @ObservedObject var bleManager = BLEManager()
+    @State var presentAddDeviceMenu = false
     
     var body: some View {
         VStack(spacing: 10) {
@@ -51,39 +110,34 @@ struct QDGTaskUIView: View {
                 .padding(.leading, Metrics.PADDING_HORIZONTAL_MAIN)
                 .padding(.trailing, Metrics.PADDING_HORIZONTAL_MAIN)
             
-            Text("We will now connect to the KeyDuo, perform a test, and analyze your results.")
+            Text("We will now connect to the KeyDuo")
                 .multilineTextAlignment(.leading)
                 .font(.system(size: 18, weight: .regular, design: .default))
                 .padding(.leading, Metrics.PADDING_HORIZONTAL_MAIN)
                 .padding(.trailing, Metrics.PADDING_HORIZONTAL_MAIN)
             
-            HStack(spacing: 10) {
-                Button(action: {
-                    motionStart()
-                }, label: {
-                     Text("Start Assessment")
-                        .padding(Metrics.PADDING_BUTTON_LABEL*2.5)
-                        .foregroundColor(.white)
-                        .background(isMotionActive ? Color.gray : Color.green)
-                        .clipShape(Circle())
-                        .font(.system(size: 20, weight: .bold, design: .default))
-                })
-                Button(action: {
-                    motionStop()
-                }, label: {
-                     Text("Practice")
-                        .padding(Metrics.PADDING_BUTTON_LABEL*2.5)
-                        .foregroundColor(.white)
-                        .background(isMotionActive ? Color.red : Color.gray)
-                        .clipShape(Circle())
-                        .font(.system(size: 20, weight: .bold, design: .default))
-                })
-            }.padding(Metrics.PADDING_VERTICAL_MAIN)
+            Spacer()
             
-            Text(isMotionActive ? "\(timerDelegate.elapsedSeconds)" : "")
-                .padding(Metrics.PADDING_BUTTON_LABEL)
-                .font(.system(size: 30, weight: .light, design: .rounded))
+            Text("Bluetooth Devices")
+                .font(.largeTitle)
+                .frame(maxWidth: .infinity, alignment: .center)
             
+            Spacer()
+            
+            List(bleManager.connectedPeripherals) { peripheral in
+                ConnectedDeviceView(bleManager: bleManager, peripheral: peripheral)
+            }
+            
+            Button(action: {
+                presentAddDeviceMenu = true
+            }) {
+                HStack {
+                    Spacer()
+                    Text("Add Device")
+                    Spacer()
+                }
+            }
+
             Spacer()
             
             Image("SBDLogoGrey")
@@ -91,23 +145,12 @@ struct QDGTaskUIView: View {
                 .scaledToFit()
                 .padding(.leading, Metrics.PADDING_HORIZONTAL_MAIN*4)
                 .padding(.trailing, Metrics.PADDING_HORIZONTAL_MAIN*4)
-            
-            if useAppleWatch {
-                HStack(spacing: 10) {
-                    Image("WatchIcon")
-                        .resizable()
-                        .frame(width: 50, height: 50, alignment: .center)
-                    
-                    Text("Apple Watch NOT connected")
-                        .fontWeight(.bold)
-                        .foregroundColor(.red)
-                }
-            }
-        }.onAppear(perform: {
-            self.isMotionActive = motionManager.isActive
-            self.timer.delegate = timerDelegate
+        }.sheet(isPresented: $presentAddDeviceMenu, onDismiss: {presentAddDeviceMenu = false}, content: {
+            AddDeviceView(bleManager: bleManager)
         })
-        
+        .onAppear {
+            bleManager.refreshConnectedDevices()
+        }.padding()
     }
 }
 

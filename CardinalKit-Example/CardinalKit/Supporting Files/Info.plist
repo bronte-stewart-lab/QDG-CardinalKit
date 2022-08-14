@@ -83,6 +83,8 @@
 	<true/>
 	<key>NSBluetoothAlwaysUsageDescription</key>
 	<string>Used for sensor collection demo tasks.</string>
+	<key>NSBluetoothPeripheralUsageDescription</key>
+	<string>Used for connecting to the KeyDuo</string>
 	<key>NSCameraUsageDescription</key>
 	<string>Used In ResearchKit Active Tasks.</string>
 	<key>NSFaceIDUsageDescription</key>
