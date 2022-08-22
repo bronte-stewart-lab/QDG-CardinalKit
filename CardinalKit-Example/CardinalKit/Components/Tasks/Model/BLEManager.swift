@@ -13,7 +13,7 @@ struct Peripheral: Identifiable {
     let id: Int
     let name: String
     let rssi: Int
-    let corePeripheral: CBPeripheral
+    let corePeripheral: CBPeripheral // Object from CoreBluetooth 
     var heartRate = false
     var bloodPressure = false
     var weight = false
@@ -22,20 +22,12 @@ struct Peripheral: Identifiable {
     var bloodPressureCharacteristic: CBCharacteristic? = nil
 }
 
-//let heartRateServiceCBUUID = CBUUID(string: "0x180D")
-
 let ServiceNameToCBUUID = [
-    "Heart Rate" : CBUUID(string: "0x180D"),
-    "Blood Pressure" : CBUUID(string: "0x1810"),
-    "Enhanced Blood Pressure" : CBUUID(string: "0x2B34"),
-    "Weight" : CBUUID(string: "0x181D")
+    "HE_Service" : CBUUID(string: "b7779a75-f00a-05b4-147b-abf02f0d9b16"),
 ]
 
 let acceptableDeviceCBUUIDList = [
-    ServiceNameToCBUUID["Heart Rate"]!,
-    ServiceNameToCBUUID["Blood Pressure"]!,
-    ServiceNameToCBUUID["Enhanced Blood Pressure"]!,
-    ServiceNameToCBUUID["Weight"]!
+    ServiceNameToCBUUID["HE_Service"]!
 ]
 
 class BLEManager: NSObject, CBCentralManagerDelegate, ObservableObject, CBPeripheralDelegate {
@@ -100,12 +92,12 @@ class BLEManager: NSObject, CBCentralManagerDelegate, ObservableObject, CBPeriph
     }
     
     func startScanning() {
-        print("startScanning")
+        print("Starting Scan")
         myCentral.scanForPeripherals(withServices: acceptableDeviceCBUUIDList, options: nil)
     }
     
     func stopScanning() {
-        print("stopScanning")
+        print("Stopping Scan")
         myCentral.stopScan()
     }
     
@@ -115,18 +107,30 @@ class BLEManager: NSObject, CBCentralManagerDelegate, ObservableObject, CBPeriph
     }
     
     func centralManager(_ central: CBCentralManager, didConnect peripheral: CBPeripheral) {
-        print("Yay!  Connected!")
+        print("Yay! Connected!")
         refreshConnectedDevices()
         discoverServices(peripheral: peripheral)
     }
     
-    // Refresh the list of devices that are currently connected
+    // We keep the list of connected BT devices in: connectedPeripherals
+    // This function refreshes that list by
+    // 1. Querying CoreBluetooth for which devices we are connected to and put it into detectedPeripherals
+    // 2. Going through the current version of connectPeripherals and seeing which devices we are still connected to
+    // 3. Going through
     func refreshConnectedDevices() {
+        
+        // Call out to CoreBluetooth and see which peripherals we are connected to right now
         let detectedPeripherals = myCentral.retrieveConnectedPeripherals(withServices: acceptableDeviceCBUUIDList)
         
+        // A list for each peripheral we are connected to after the refresh
         var newConnectectedPeripherals: [Peripheral] = []
         
+        // For each BT device in our current list
+        // We check if its identifier matches one in our newly detected list
+        // If yes, we put it in our new list
+        // Otherwise, we ignore it
         for peripheral in connectedPeripherals {
+            print("We have a previously connected peripheral")
             var stillConnected = false
             for detectedPeriph in detectedPeripherals {
                 if peripheral.corePeripheral.identifier == detectedPeriph.identifier {
@@ -134,22 +138,34 @@ class BLEManager: NSObject, CBCentralManagerDelegate, ObservableObject, CBPeriph
                     break
                 }
             }
+            print("We are NOT still connected to this peripheral")
             if stillConnected {
+                print("We ARE still connected to this peripheral")
                 newConnectectedPeripherals.append(peripheral)
             }
         }
         
+        // Clear the old list and replcae it with our new list
         connectedPeripherals.removeAll()
         connectedPeripherals = newConnectectedPeripherals
         
+        // Now go through each of the new devices
         for detectedPeriph in detectedPeripherals {
             var alreadyConnected = false
+            
+            // If this new device is already in our list, then we move on
             for peripheral in connectedPeripherals {
                 if peripheral.corePeripheral.identifier == detectedPeriph.identifier {
                     alreadyConnected = true
                     break
                 }
             }
+            
+            // Otherwise, we add it to our list which keeps track of
+            // 1. id - based on the order it was added to the list (note: this is unreliable)
+            // 2. name of the device (or "Unknown Device")
+            // 3. rssi ??
+            // 4. corePeripheral - the actual peripheral object 
             if !alreadyConnected {
                 let newConnectedPeripheral = Peripheral(id: connectedPeripherals.count, name: detectedPeriph.name ?? "Unknown Device", rssi: -1, corePeripheral: detectedPeriph)
                 newConnectedPeripheral.corePeripheral.delegate = self
@@ -161,7 +177,6 @@ class BLEManager: NSObject, CBCentralManagerDelegate, ObservableObject, CBPeriph
     
     func centralManager(_ central: CBCentralManager, didDisconnectPeripheral peripheral: CBPeripheral, error: Error?) {
         print("Lost connection to peripheral")
-        //refreshConnectedDevices()
     }
     
     func centralManager(_ central: CBCentralManager, didFailToConnect peripheral: CBPeripheral, error: Error?) {
@@ -183,7 +198,7 @@ class BLEManager: NSObject, CBCentralManagerDelegate, ObservableObject, CBPeriph
     
         // update peripheral properties
         connectedPeripherals[index].services[service] = characteristics
-        if service.uuid == ServiceNameToCBUUID["Heart Rate"] {
+        if service.uuid == ServiceNameToCBUUID["Heart Rate"] { //"HE_Service"
             connectedPeripherals[index].heartRate = true
         }
         if service.uuid == ServiceNameToCBUUID["Blood Pressure"] {
@@ -195,11 +210,11 @@ class BLEManager: NSObject, CBCentralManagerDelegate, ObservableObject, CBPeriph
         
         for characteristic in characteristics {
             print(characteristic.uuid)
-            if characteristic.uuid == CBUUID(string: "0x2A19") {
+            if characteristic.uuid == CBUUID(string: "0x2A19") { //"HE_Char"
                 peripheral.readValue(for: characteristic)
             }
             
-            if characteristic.uuid == CBUUID(string: "0x2A35") {
+            if characteristic.uuid == CBUUID(string: "0x2A35") { //
                 print("Attempting to read value for blood pressure")
                 peripheral.setNotifyValue(true, for: characteristic)
                 connectedPeripherals[index].bloodPressureCharacteristic = characteristic
@@ -209,7 +224,7 @@ class BLEManager: NSObject, CBCentralManagerDelegate, ObservableObject, CBPeriph
     
     func peripheral(_ peripheral: CBPeripheral, didUpdateNotificationStateFor characteristic: CBCharacteristic, error: Error?) {
         if error != nil {
-            print(error)
+            print(error as Any)
         }
         print("Successfully updated the notification state for \(characteristic.uuid)")
     }
@@ -235,7 +250,7 @@ class BLEManager: NSObject, CBCentralManagerDelegate, ObservableObject, CBPeriph
             print("Are we actually ever getting here?")
             let index = findPeripheralIndex(peripheral: peripheral)
             print("Reading blood pressure information from peripheral \(index)")
-            print("Value is: \(characteristic.value)")
+            print("Value is: \(String(describing: characteristic.value))")
             getBloodPressureInfo(from: characteristic)
         }
         print(characteristic.value ?? "no value")

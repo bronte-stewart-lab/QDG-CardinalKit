@@ -34,6 +34,8 @@
 	<string>Welcome aboard.</string>
 	<key>Completion Step Text</key>
 	<string>This step concludes the onboarding and consent process of the CardinalKit framework. Next up, you will see main app functionality.</string>
+	<key>FacebookAdvertiserIDCollectionEnabled</key>
+	<false/>
 	<key>Failed Login Title</key>
 	<string>Unable to Login 😔</string>
 	<key>Failed Login Text</key>
@@ -63,7 +65,7 @@
 	<key>Login-Sign-In-With-Facebook</key>
 	<dict>
 		<key>Enabled</key>
-		<true/>
+		<false/>
 	</dict>
 	<key>Login-Sign-In-With-Google</key>
 	<dict>
@@ -78,7 +80,7 @@
 	<key>Login-Sign-In-With-Apple</key>
 	<dict>
 		<key>Enabled</key>
-		<true/>
+		<false/>
 		<key>Title</key>
 		<string>Sign in with Apple</string>
 		<key>Text</key>

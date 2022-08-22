@@ -385,9 +385,9 @@
 		8E6E1E2F25353A550024B8DF /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				7A4278BB28A9A2D00047C684 /* QDGTaskUIView.swift */,
 				8E9CDF822592844A00C8A228 /* LearnUIView.swift */,
 				8EA664222592E57200B6A45A /* SensorsDemoUIView.swift */,
-				7A4278BB28A9A2D00047C684 /* QDGTaskUIView.swift */,
 				8E7FFFB725DE350A002982B4 /* CoffeeUIView.swift */,
 				8E7FFFBA25DE37FF002982B4 /* CoffeePieChartView.swift */,
 				27653A12272A2E7700D74E83 /* LocalTaskListItemView.swift */,
@@ -941,8 +941,10 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = "CardinalKit-Example.entitlements";
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = BG2WMVK7QM;
 				INFOPLIST_FILE = "CardinalKit/Supporting Files/Info.plist";
 				IPHONEOS_DEPLOYMENT_TARGET = 14.3;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -953,6 +955,7 @@
 				MODULE_NAME = ExampleApp;
 				PRODUCT_BUNDLE_IDENTIFIER = edu.stanford.hbs.qdg;
 				PRODUCT_NAME = "CardinalKit Example";
+				PROVISIONING_PROFILE_SPECIFIER = "";
 				SWIFT_OBJC_BRIDGING_HEADER = "CardinalKit/Supporting Files/CardinalKit_Example-Bridging-Header.h";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_SWIFT3_OBJC_INFERENCE = Default;

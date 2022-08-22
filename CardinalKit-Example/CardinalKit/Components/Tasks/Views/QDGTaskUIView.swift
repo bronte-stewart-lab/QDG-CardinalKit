@@ -16,6 +16,7 @@ struct AddDeviceView: View {
     
     var body: some View {
         VStack(alignment: .leading) {
+            
             Text("Searching for Bluetooth Devices").font(.title)
             
             List(bleManager.peripherals) { peripheral in
@@ -26,8 +27,8 @@ struct AddDeviceView: View {
                 }
                 .contentShape(Rectangle())
                 .onTapGesture {
-                    bleManager.connect(peripheral: peripheral.corePeripheral)
-                    presentationMode.wrappedValue.dismiss()
+                    bleManager.connect(peripheral: peripheral.corePeripheral) // connect the device
+                    presentationMode.wrappedValue.dismiss() // dismiss this view
                 }
             }
             
@@ -42,6 +43,7 @@ struct AddDeviceView: View {
     }
 }
 
+// Display the list of connected devices
 struct ConnectedDeviceView: View {
     
     @ObservedObject var bleManager: BLEManager
@@ -54,39 +56,15 @@ struct ConnectedDeviceView: View {
                 Spacer()
             }
             HStack {
-                if (peripheral.heartRate) {
-                    Image(systemName: "suit.heart.fill")
-                }
-                if (peripheral.weight) {
-                    Image(systemName: "scalemass.fill")
-                }
-                if (peripheral.bloodPressure) {
-                    Image(systemName: "arrow.up.heart.fill")
-                }
-                Spacer()
-                
-                Text("\(peripheral.batteryLevel)%")
-                
-                if (peripheral.batteryLevel >= 0 && peripheral.batteryLevel < 20) {
-                    Image(systemName: "battery.0")
-                } else if peripheral.batteryLevel < 40 {
-                    Image(systemName: "battery.25")
-                } else {
-                    Image(systemName: "battery.100")
-                }
-            }
-            
         }
         .contentShape(Rectangle())
         .onTapGesture {
-            print("Click detected")
-            //print(acceptableDeviceCBUUIDList)
+            print("User clicked device: \(peripheral.name)")
             print(peripheral.services)
             if peripheral.bloodPressureCharacteristic != nil {
-//                peripheral.corePeripheral.readValue(for: peripheral.bloodPressureCharacteristic!)
                 peripheral.corePeripheral.setNotifyValue(true, for: peripheral.bloodPressureCharacteristic!)
             }
-//            bleManager.discoverServices(peripheral: peripheral.corePeripheral)
+        }
         }
     }
 }
@@ -145,10 +123,17 @@ struct QDGTaskUIView: View {
                 .scaledToFit()
                 .padding(.leading, Metrics.PADDING_HORIZONTAL_MAIN*4)
                 .padding(.trailing, Metrics.PADDING_HORIZONTAL_MAIN*4)
-        }.sheet(isPresented: $presentAddDeviceMenu, onDismiss: {presentAddDeviceMenu = false}, content: {
-            AddDeviceView(bleManager: bleManager)
-        })
+        }.sheet(isPresented: $presentAddDeviceMenu,
+                onDismiss: {
+                    presentAddDeviceMenu = false
+                    print("REFRESHING BLUETOOTH DEVICES")
+                    bleManager.refreshConnectedDevices()
+                },
+                content: {
+                    AddDeviceView(bleManager: bleManager)
+                })
         .onAppear {
+            print("REFRESHING BLUETOOTH DEVICES")
             bleManager.refreshConnectedDevices()
         }.padding()
     }
