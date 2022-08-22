@@ -12,14 +12,12 @@ import CoreBluetooth
 struct Peripheral: Identifiable {
     let id: Int
     let name: String
-    let rssi: Int
+    let rssi: Int // Received Signal Strength Indicator (RSSI)
     let corePeripheral: CBPeripheral // Object from CoreBluetooth 
-    var heartRate = false
-    var bloodPressure = false
-    var weight = false
+    var HE_Service = false // Does this peripheral hold an HE Service?
     var services: [CBService:[CBCharacteristic]] = [:]
     var batteryLevel: Int = 0
-    var bloodPressureCharacteristic: CBCharacteristic? = nil
+    var HE_Charactersitic: CBCharacteristic? = nil // HE characteristic object
 }
 
 let ServiceNameToCBUUID = [
@@ -106,6 +104,11 @@ class BLEManager: NSObject, CBCentralManagerDelegate, ObservableObject, CBPeriph
         myCentral.connect(peripheral)
     }
     
+    func discoverServices(peripheral: CBPeripheral) {
+        print("Attempting to discover services")
+        peripheral.discoverServices(nil)
+    }
+    
     func centralManager(_ central: CBCentralManager, didConnect peripheral: CBPeripheral) {
         print("Yay! Connected!")
         refreshConnectedDevices()
@@ -184,51 +187,60 @@ class BLEManager: NSObject, CBCentralManagerDelegate, ObservableObject, CBPeriph
     }
     
     func peripheral(_ peripheral: CBPeripheral, didDiscoverServices error: Error?) {
+        
+        print("Discovering services")
+        
         guard let services = peripheral.services else { return }
+        
         for service in services {
+            
+            print("Found service: \(service.uuid)")
             peripheral.discoverCharacteristics(nil, for: service)
         }
     }
     
     func peripheral(_ peripheral: CBPeripheral, didDiscoverCharacteristicsFor service: CBService, error: Error?) {
+        
+        print("Discovering characteristics for service: \(service.uuid)")
+        
         guard let characteristics = service.characteristics else { return }
         
         // find the relevant peripheral in the list
         let index = findPeripheralIndex(peripheral: peripheral)
     
-        // update peripheral properties
+        // update peripheral properties (just for housekpeeing, not functionality)
         connectedPeripherals[index].services[service] = characteristics
-        if service.uuid == ServiceNameToCBUUID["Heart Rate"] { //"HE_Service"
-            connectedPeripherals[index].heartRate = true
-        }
-        if service.uuid == ServiceNameToCBUUID["Blood Pressure"] {
-            connectedPeripherals[index].bloodPressure = true
-        }
-        if service.uuid == ServiceNameToCBUUID["Weight"] {
-            connectedPeripherals[index].weight = true
+        if service.uuid == ServiceNameToCBUUID["HE_Service"] { //"HE_Service"
+            
+            print("Found an HE Service")
+            connectedPeripherals[index].HE_Service = true
+            
         }
         
         for characteristic in characteristics {
-            print(characteristic.uuid)
-            if characteristic.uuid == CBUUID(string: "0x2A19") { //"HE_Char"
-                peripheral.readValue(for: characteristic)
-            }
             
-            if characteristic.uuid == CBUUID(string: "0x2A35") { //
-                print("Attempting to read value for blood pressure")
+            print("Characteristic found with UUID: \(characteristic.uuid)")
+            
+            if characteristic.uuid == CBUUID(string: "HE_Char") { //
+                
+                print("Subscribing to this characteristic")
                 peripheral.setNotifyValue(true, for: characteristic)
-                connectedPeripherals[index].bloodPressureCharacteristic = characteristic
+                connectedPeripherals[index].HE_Charactersitic = characteristic
+                
             }
         }
     }
     
+    // This gets called as soon as we change setNotifyValue to be true for this characteristic
     func peripheral(_ peripheral: CBPeripheral, didUpdateNotificationStateFor characteristic: CBCharacteristic, error: Error?) {
         if error != nil {
+            print("Unable to update notification state for \(characteristic.uuid)")
             print(error as Any)
         }
         print("Successfully updated the notification state for \(characteristic.uuid)")
     }
     
+    // Helper function (can probably eliminate this in the future)
     func findPeripheralIndex(peripheral: CBPeripheral) -> Int {
         for index in 0..<connectedPeripherals.count {
             if connectedPeripherals[index].corePeripheral.identifier == peripheral.identifier {
@@ -238,26 +250,38 @@ class BLEManager: NSObject, CBCentralManagerDelegate, ObservableObject, CBPeriph
         return -1
     }
     
+    // What to do when we get an updated value for our characteristic
+    // Hopefully this triggers every time a new value is WRITTEN and not only when the value changes
     func peripheral(_ peripheral: CBPeripheral, didUpdateValueFor characteristic: CBCharacteristic,
                     error: Error?) {
-        print("Updated value function triggered")
-        print(characteristic.uuid)
-        // check the battery status
-        if characteristic.uuid == CBUUID(string: "0x2A19") {
+        
+        print("Updated value function triggered for characteristic \(characteristic.uuid)")
+        
+        if characteristic.uuid == CBUUID(string: "HE_Char") {
+            
+            print("New value for HE_Char")
+            
             let index = findPeripheralIndex(peripheral: peripheral)
-            connectedPeripherals[index].batteryLevel = Int(characteristic.value?.first! ?? 0)
-        } else if characteristic.uuid == CBUUID(string: "0x2A35") {
-            print("Are we actually ever getting here?")
-            let index = findPeripheralIndex(peripheral: peripheral)
-            print("Reading blood pressure information from peripheral \(index)")
-            print("Value is: \(String(describing: characteristic.value))")
-            getBloodPressureInfo(from: characteristic)
+            
+            print("Reading HE Sensor data from peripheral \(index)")
+            print("Value: \(String(describing: characteristic.value))")
+            
+            getHESensorData(from: characteristic)
         }
-        print(characteristic.value ?? "no value")
+        
+        print(characteristic.value ?? "No value")
     }
     
-    func getBloodPressureInfo(from characteristic: CBCharacteristic) {
+    // Helper function
+    // Unpacks the data from the byte array sent over from the peripheral
+    // Stores it in class variables
+    func getHESensorData(from characteristic: CBCharacteristic) {
+        
+        print("Getting HE Sensor Data")
+        
         guard let characteristicData = characteristic.value else { return }
+        
+        // converts the characteristic data into a byte array
         let byteArray = [UInt8](characteristicData)
         
         var ismmHg = true
@@ -322,11 +346,6 @@ class BLEManager: NSObject, CBCentralManagerDelegate, ObservableObject, CBPeriph
             print(Float(byteArray[10]))
         }
         dataGatheringComplete = true
-    }
-    
-    func discoverServices(peripheral: CBPeripheral) {
-        print("Attempting to discover services")
-        peripheral.discoverServices(nil)
     }
     
     override init() {

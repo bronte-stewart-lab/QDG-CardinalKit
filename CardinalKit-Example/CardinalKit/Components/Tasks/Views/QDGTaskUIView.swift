@@ -61,8 +61,8 @@ struct ConnectedDeviceView: View {
         .onTapGesture {
             print("User clicked device: \(peripheral.name)")
             print(peripheral.services)
-            if peripheral.bloodPressureCharacteristic != nil {
-                peripheral.corePeripheral.setNotifyValue(true, for: peripheral.bloodPressureCharacteristic!)
+            if peripheral.HE_Charactersitic != nil {
+                peripheral.corePeripheral.setNotifyValue(true, for: peripheral.HE_Charactersitic!)
             }
         }
         }
