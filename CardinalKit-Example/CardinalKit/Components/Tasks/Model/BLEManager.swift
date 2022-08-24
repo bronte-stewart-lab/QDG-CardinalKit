@@ -48,6 +48,7 @@ class BLEManager: NSObject, CBCentralManagerDelegate, ObservableObject, CBPeriph
     
     // Identify when the CoreBluetooth Central Manager changes state; probably representing a change in client Bluetooth settings
     func centralManagerDidUpdateState(_ central: CBCentralManager) {
+        
         switch central.state {
         case .unknown:
             stateText = "unknown"
@@ -64,6 +65,10 @@ class BLEManager: NSObject, CBCentralManagerDelegate, ObservableObject, CBPeriph
             stateText = "poweredOn"
             isSwitchedOn = true
         }
+    }
+    
+    func peripheralManager(_ peripheral: CBPeripheralManager, didReceiveWrite requests: CBATTRequest){
+        print("Received Write")
     }
     
     func centralManager(_ central: CBCentralManager, didDiscover peripheral: CBPeripheral, advertisementData: [String : Any], rssi RSSI: NSNumber) {
@@ -104,14 +109,9 @@ class BLEManager: NSObject, CBCentralManagerDelegate, ObservableObject, CBPeriph
         myCentral.connect(peripheral)
     }
     
-    func discoverServices(peripheral: CBPeripheral) {
-        print("Attempting to discover services")
-        peripheral.discoverServices(nil)
-    }
-    
     func centralManager(_ central: CBCentralManager, didConnect peripheral: CBPeripheral) {
         print("Yay! Connected!")
-        refreshConnectedDevices()
+        peripheral.delegate = self
         discoverServices(peripheral: peripheral)
     }
     
@@ -122,8 +122,13 @@ class BLEManager: NSObject, CBCentralManagerDelegate, ObservableObject, CBPeriph
     // 3. Going through
     func refreshConnectedDevices() {
         
+        print("Refreshing BT devices")
+        
         // Call out to CoreBluetooth and see which peripherals we are connected to right now
         let detectedPeripherals = myCentral.retrieveConnectedPeripherals(withServices: acceptableDeviceCBUUIDList)
+        
+        print("Newly detected peripherals")
+        print(detectedPeripherals)
         
         // A list for each peripheral we are connected to after the refresh
         var newConnectectedPeripherals: [Peripheral] = []
@@ -133,7 +138,7 @@ class BLEManager: NSObject, CBCentralManagerDelegate, ObservableObject, CBPeriph
         // If yes, we put it in our new list
         // Otherwise, we ignore it
         for peripheral in connectedPeripherals {
-            print("We have a previously connected peripheral")
+            print("We have a previously connected peripheral with id: \(peripheral.id)")
             var stillConnected = false
             for detectedPeriph in detectedPeripherals {
                 if peripheral.corePeripheral.identifier == detectedPeriph.identifier {
@@ -148,17 +153,21 @@ class BLEManager: NSObject, CBCentralManagerDelegate, ObservableObject, CBPeriph
             }
         }
         
-        // Clear the old list and replcae it with our new list
+        // Clear the old list and replace it with our new list
         connectedPeripherals.removeAll()
         connectedPeripherals = newConnectectedPeripherals
         
         // Now go through each of the new devices
         for detectedPeriph in detectedPeripherals {
+            
+            print("We have a newly detected peripheral")
+            
             var alreadyConnected = false
             
             // If this new device is already in our list, then we move on
             for peripheral in connectedPeripherals {
                 if peripheral.corePeripheral.identifier == detectedPeriph.identifier {
+                    print("This is already connected")
                     alreadyConnected = true
                     break
                 }
@@ -206,26 +215,31 @@ class BLEManager: NSObject, CBCentralManagerDelegate, ObservableObject, CBPeriph
         guard let characteristics = service.characteristics else { return }
         
         // find the relevant peripheral in the list
-        let index = findPeripheralIndex(peripheral: peripheral)
+//        let index = findPeripheralIndex(peripheral: peripheral)
     
-        // update peripheral properties (just for housekpeeing, not functionality)
-        connectedPeripherals[index].services[service] = characteristics
-        if service.uuid == ServiceNameToCBUUID["HE_Service"] { //"HE_Service"
-            
-            print("Found an HE Service")
-            connectedPeripherals[index].HE_Service = true
-            
-        }
+//        // update peripheral properties (just for housekpeeing, not functionality)
+//        connectedPeripherals[index].services[service] = characteristics
+//        if service.uuid == ServiceNameToCBUUID["HE_Service"] { //"HE_Service"
+//
+//            print("Found an HE Service")
+//            connectedPeripherals[index].HE_Service = true
+//
+//        }
         
         for characteristic in characteristics {
             
             print("Characteristic found with UUID: \(characteristic.uuid)")
             
-            if characteristic.uuid == CBUUID(string: "HE_Char") { //
+            if characteristic.uuid == CBUUID(string: "B7779A75-F00A-05B4-147B-ABF02F0D9B16") { //
+                
+                print("Characteristic Properties")
+                print("Value: \(String(describing: characteristic.value))")
+                print("Descriptors: \(String(describing: characteristic.descriptors))")
+                print("isNotifying: \(String(describing: characteristic.isNotifying))")
                 
                 print("Subscribing to this characteristic")
                 peripheral.setNotifyValue(true, for: characteristic)
-                connectedPeripherals[index].HE_Charactersitic = characteristic
+//                connectedPeripherals[index].HE_Charactersitic = characteristic
                 
             }
         }
@@ -236,8 +250,9 @@ class BLEManager: NSObject, CBCentralManagerDelegate, ObservableObject, CBPeriph
         if error != nil {
             print("Unable to update notification state for \(characteristic.uuid)")
             print(error as Any)
+        } else {
+            print("Successfully updated the notification state for \(characteristic.uuid)")
         }
-        print("Successfully updated the notification state for \(characteristic.uuid)")
     }
     
     // Helper function (can probably eliminate this in the future)
@@ -257,19 +272,21 @@ class BLEManager: NSObject, CBCentralManagerDelegate, ObservableObject, CBPeriph
         
         print("Updated value function triggered for characteristic \(characteristic.uuid)")
         
-        if characteristic.uuid == CBUUID(string: "HE_Char") {
+        if characteristic.uuid == CBUUID(string: "B7779A75-F00A-05B4-147B-ABF02F0D9B16") {
             
             print("New value for HE_Char")
             
-            let index = findPeripheralIndex(peripheral: peripheral)
+//            let index = findPeripheralIndex(peripheral: peripheral)
             
-            print("Reading HE Sensor data from peripheral \(index)")
+//            print("Reading HE Sensor data from peripheral \(index)")
             print("Value: \(String(describing: characteristic.value))")
             
-            getHESensorData(from: characteristic)
+//            getHESensorData(from: characteristic)
+        } else {
+            print("Wrong characteristic")
         }
         
-        print(characteristic.value ?? "No value")
+//        print(characteristic.value ?? "No value")
     }
     
     // Helper function
@@ -346,6 +363,11 @@ class BLEManager: NSObject, CBCentralManagerDelegate, ObservableObject, CBPeriph
             print(Float(byteArray[10]))
         }
         dataGatheringComplete = true
+    }
+    
+    func discoverServices(peripheral: CBPeripheral) {
+        print("Attempting to discover services")
+        peripheral.discoverServices(nil)
     }
     
     override init() {

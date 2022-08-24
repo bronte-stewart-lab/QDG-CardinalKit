@@ -126,14 +126,12 @@ struct QDGTaskUIView: View {
         }.sheet(isPresented: $presentAddDeviceMenu,
                 onDismiss: {
                     presentAddDeviceMenu = false
-                    print("REFRESHING BLUETOOTH DEVICES")
                     bleManager.refreshConnectedDevices()
                 },
                 content: {
                     AddDeviceView(bleManager: bleManager)
                 })
         .onAppear {
-            print("REFRESHING BLUETOOTH DEVICES")
             bleManager.refreshConnectedDevices()
         }.padding()
     }
