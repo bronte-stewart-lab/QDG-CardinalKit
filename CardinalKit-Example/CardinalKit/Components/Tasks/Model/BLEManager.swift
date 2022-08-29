@@ -279,9 +279,8 @@ class BLEManager: NSObject, CBCentralManagerDelegate, ObservableObject, CBPeriph
 //            let index = findPeripheralIndex(peripheral: peripheral)
             
 //            print("Reading HE Sensor data from peripheral \(index)")
-            print("Value: \(String(describing: characteristic.value))")
-            
-//            getHESensorData(from: characteristic)
+//            print("Value: \(String(describing: characteristic.value))")
+            getHESensorData(from: characteristic)
         } else {
             print("Wrong characteristic")
         }
@@ -296,73 +295,79 @@ class BLEManager: NSObject, CBCentralManagerDelegate, ObservableObject, CBPeriph
         
         print("Getting HE Sensor Data")
         
-        guard let characteristicData = characteristic.value else { return }
+//        guard characteristic.value != nil else { return }
+        
+        print("Inside proper function. Value:")
+        if let data = characteristic.value {
+            print(data.map { String(format: "%lu", $0) }.joined())
+        }
+//        print(characteristic.value as Any)
         
         // converts the characteristic data into a byte array
-        let byteArray = [UInt8](characteristicData)
-        
-        var ismmHg = true
-        var supportsPulse = true
-        
-        // firstly, extract core data about the metrics from the flags byte
-        if byteArray[0] & 0x01 == 0 {
-            print("Units are mmHg")
-            self.pressureUnits = "mmHg"
-        } else {
-            print("Units are kPa")
-            self.pressureUnits = "kPa"
-            ismmHg = false
-        }
-        
-        if byteArray[0] & (0x01 << 1) == 0 {
-            print("Time stamp flag not present")
-        } else {
-            print("Time stamp flag present")
-        }
-        
-        if byteArray[0] & (0x01 << 2) == 0 {
-            print("Pulse rate flag not present")
-            supportsPulse = false
-        } else {
-            print("Pulse rate flag present")
-        }
-        
-        if byteArray[0] & (0x01 << 3) == 0 {
-            print("User ID flag not present")
-        } else {
-            print("User ID flag present")
-        }
-        
-        if byteArray[0] & (0x01 << 4) == 0 {
-            print("Measurement status not present")
-        } else {
-            print("Measurement status present")
-        }
-        
-        if ismmHg {
-            print("We've got mmHg")
-            self.systolicPressure = Float(byteArray[1])
-            self.diastolicPressure = Float(byteArray[3])
-            
-            print("Systolic: \(systolicPressure)")
-            print("Diastolic: \(diastolicPressure)")
-        } else {
-            print("We've got kPA")
-        }
-        
-        if supportsPulse {
-            print("Reading pulse data")
-            self.heartRate = Float(byteArray[5])
-            print("Heart rate: \(self.heartRate)")
-            print(Float(byteArray[4]))
-            print(Float(byteArray[5]))
-            print(Float(byteArray[6]))
-            print(Float(byteArray[7]))
-            print(Float(byteArray[8]))
-            print(Float(byteArray[9]))
-            print(Float(byteArray[10]))
-        }
-        dataGatheringComplete = true
+//        let byteArray = [UInt8](characteristic)
+//
+//        var ismmHg = true
+//        var supportsPulse = true
+//
+//        // firstly, extract core data about the metrics from the flags byte
+//        if byteArray[0] & 0x01 == 0 {
+//            print("Units are mmHg")
+//            self.pressureUnits = "mmHg"
+//        } else {
+//            print("Units are kPa")
+//            self.pressureUnits = "kPa"
+//            ismmHg = false
+//        }
+//
+//        if byteArray[0] & (0x01 << 1) == 0 {
+//            print("Time stamp flag not present")
+//        } else {
+//            print("Time stamp flag present")
+//        }
+//
+//        if byteArray[0] & (0x01 << 2) == 0 {
+//            print("Pulse rate flag not present")
+//            supportsPulse = false
+//        } else {
+//            print("Pulse rate flag present")
+//        }
+//
+//        if byteArray[0] & (0x01 << 3) == 0 {
+//            print("User ID flag not present")
+//        } else {
+//            print("User ID flag present")
+//        }
+//
+//        if byteArray[0] & (0x01 << 4) == 0 {
+//            print("Measurement status not present")
+//        } else {
+//            print("Measurement status present")
+//        }
+//
+//        if ismmHg {
+//            print("We've got mmHg")
+//            self.systolicPressure = Float(byteArray[1])
+//            self.diastolicPressure = Float(byteArray[3])
+//
+//            print("Systolic: \(systolicPressure)")
+//            print("Diastolic: \(diastolicPressure)")
+//        } else {
+//            print("We've got kPA")
+//        }
+//
+//        if supportsPulse {
+//            print("Reading pulse data")
+//            self.heartRate = Float(byteArray[5])
+//            print("Heart rate: \(self.heartRate)")
+//            print(Float(byteArray[4]))
+//            print(Float(byteArray[5]))
+//            print(Float(byteArray[6]))
+//            print(Float(byteArray[7]))
+//            print(Float(byteArray[8]))
+//            print(Float(byteArray[9]))
+//            print(Float(byteArray[10]))
+//        }
+//        dataGatheringComplete = true
     }
     
     func discoverServices(peripheral: CBPeripheral) {
