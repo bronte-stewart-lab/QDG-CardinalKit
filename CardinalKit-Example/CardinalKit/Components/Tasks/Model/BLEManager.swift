@@ -39,6 +39,7 @@ class BLEManager: NSObject, CBCentralManagerDelegate, ObservableObject, CBPeriph
     @Published var stateText: String = "Waiting for initialisation"
     
     // Blood Pressure Specific Published Data
+    @Published var ble_data: String = "No Data"
     @Published var systolicPressure: Float = 0.0
     @Published var diastolicPressure: Float = 0.0
     @Published var heartRate: Float = 0.0
@@ -232,11 +233,6 @@ class BLEManager: NSObject, CBCentralManagerDelegate, ObservableObject, CBPeriph
             
             if characteristic.uuid == CBUUID(string: "B7779A75-F00A-05B4-147B-ABF02F0D9B16") { //
                 
-                print("Characteristic Properties")
-                print("Value: \(String(describing: characteristic.value))")
-                print("Descriptors: \(String(describing: characteristic.descriptors))")
-                print("isNotifying: \(String(describing: characteristic.isNotifying))")
-                
                 print("Subscribing to this characteristic")
                 peripheral.setNotifyValue(true, for: characteristic)
 //                connectedPeripherals[index].HE_Charactersitic = characteristic
@@ -295,17 +291,22 @@ class BLEManager: NSObject, CBCentralManagerDelegate, ObservableObject, CBPeriph
         
         print("Getting HE Sensor Data")
         
-//        guard characteristic.value != nil else { return }
+        guard characteristic.value != nil else { return }
         
         print("Inside proper function. Value:")
-        if let data = characteristic.value {
-            print(data.map { String(format: "%lu", $0) }.joined())
+        if let data = characteristic.value { 
+            ble_data = data.map { String(format: "%lu", $0) }.joined()
+            print(ble_data)
         }
 //        print(characteristic.value as Any)
         
         // converts the characteristic data into a byte array
-//        let byteArray = [UInt8](characteristic)
-//
+//        let byteArray = [UInt8](characteristic.value!)
+//        
+//        for data in byteArray{
+//            print(data)
+//        }
+        
 //        var ismmHg = true
 //        var supportsPulse = true
 //

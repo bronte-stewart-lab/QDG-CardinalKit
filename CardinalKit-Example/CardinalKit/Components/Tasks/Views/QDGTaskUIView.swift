@@ -82,29 +82,37 @@ struct QDGTaskUIView: View {
                 .padding(.leading, Metrics.PADDING_HORIZONTAL_MAIN*4)
                 .padding(.trailing, Metrics.PADDING_HORIZONTAL_MAIN*4)
             
-            Text("Welcome to the QDG Test!")
-                .multilineTextAlignment(.leading)
-                .font(.system(size: 18, weight: .bold, design: .default))
-                .padding(.leading, Metrics.PADDING_HORIZONTAL_MAIN)
-                .padding(.trailing, Metrics.PADDING_HORIZONTAL_MAIN)
-            
-            Text("We will now connect to the KeyDuo")
-                .multilineTextAlignment(.leading)
-                .font(.system(size: 18, weight: .regular, design: .default))
-                .padding(.leading, Metrics.PADDING_HORIZONTAL_MAIN)
-                .padding(.trailing, Metrics.PADDING_HORIZONTAL_MAIN)
-            
-            Spacer()
-            
-            Text("Bluetooth Devices")
-                .font(.largeTitle)
-                .frame(maxWidth: .infinity, alignment: .center)
-            
-            Spacer()
-            
-            List(bleManager.connectedPeripherals) { peripheral in
-                ConnectedDeviceView(bleManager: bleManager, peripheral: peripheral)
+            Group{
+                Text("Welcome to the QDG Test!")
+                    .multilineTextAlignment(.leading)
+                    .font(.system(size: 18, weight: .bold, design: .default))
+                    .padding(.leading, Metrics.PADDING_HORIZONTAL_MAIN)
+                    .padding(.trailing, Metrics.PADDING_HORIZONTAL_MAIN)
+                
+                Text("We will now connect to the KeyDuo")
+                    .multilineTextAlignment(.leading)
+                    .font(.system(size: 18, weight: .regular, design: .default))
+                    .padding(.leading, Metrics.PADDING_HORIZONTAL_MAIN)
+                    .padding(.trailing, Metrics.PADDING_HORIZONTAL_MAIN)
             }
+            
+            Spacer()
+            
+            Group{
+                Text("Bluetooth Devices")
+                    .font(.largeTitle)
+                    .frame(maxWidth: .infinity, alignment: .center)
+                
+                Text("Transmitting Data: \(self.bleManager.ble_data)")
+                
+                Spacer()
+                
+                List(bleManager.connectedPeripherals) { peripheral in
+                    ConnectedDeviceView(bleManager: bleManager, peripheral: peripheral)
+                }
+            }
+            
+            Spacer()
             
             Button(action: {
                 presentAddDeviceMenu = true
