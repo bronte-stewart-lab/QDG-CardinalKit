@@ -14,39 +14,28 @@ struct Peripheral: Identifiable {
     let id: Int
     let name: String
     let rssi: Int // Received Signal Strength Indicator (RSSI)
-    let corePeripheral: CBPeripheral // Object from CoreBluetooth 
-    var HE_Service = false // Does this peripheral hold an HE Service?
+    let corePeripheral: CBPeripheral // Object from CoreBluetooth
     var services: [CBService:[CBCharacteristic]] = [:]
-    var batteryLevel: Int = 0
-    var HE_Charactersitic: CBCharacteristic? = nil // HE characteristic object
+    var QDG_Charactersitic: CBCharacteristic? = nil // HE characteristic object
 }
 
 let ServiceNameToCBUUID = [
-    "HE_Service" : CBUUID(string: "b7779a75-f00a-05b4-147b-abf02f0d9b16"),
+    "QDG_Service" : CBUUID(string: "b7779a75-f00a-05b4-147b-abf02f0d9b16"),
 ]
 
 let acceptableDeviceCBUUIDList = [
-    ServiceNameToCBUUID["HE_Service"]!
+    ServiceNameToCBUUID["QDG_Service"]!
 ]
 
 class BLEManager: NSObject, CBCentralManagerDelegate, ObservableObject, CBPeripheralDelegate {
     
     var myCentral: CBCentralManager!
-    var bloodPressurePeripheral: CBPeripheral!
+    var QDGPeripheral: CBPeripheral!
     
     @Published var isSwitchedOn = false
     @Published var peripherals = [Peripheral]()
     @Published var connectedPeripherals = [Peripheral]()
-    @Published var stateText: String = "Waiting for initialisation"
-    
-    // Blood Pressure Specific Published Data
-    @Published var ble_data: String = "No Data"
-    @Published var systolicPressure: Float = 0.0
-    @Published var diastolicPressure: Float = 0.0
-    @Published var heartRate: Float = 0.0
-    @Published var weight: Float = 0.0
-    @Published var pressureUnits: String = "mmHg"
-    @Published var dataGatheringComplete = false
+    @Published var stateText: String = "Waiting for initialization"
     
     // Identify when the CoreBluetooth Central Manager changes state; probably representing a change in client Bluetooth settings
     func centralManagerDidUpdateState(_ central: CBCentralManager) {
@@ -178,7 +167,7 @@ class BLEManager: NSObject, CBCentralManagerDelegate, ObservableObject, CBPeriph
             // Otherwise, we add it to our list which keeps track of
             // 1. id - based on the order it was added to the list (note: this is unreliable)
             // 2. name of the device (or "Unknown Device")
-            // 3. rssi ??
+            // 3. rssi
             // 4. corePeripheral - the actual peripheral object 
             if !alreadyConnected {
                 let newConnectedPeripheral = Peripheral(id: connectedPeripherals.count, name: detectedPeriph.name ?? "Unknown Device", rssi: -1, corePeripheral: detectedPeriph)
@@ -216,27 +205,23 @@ class BLEManager: NSObject, CBCentralManagerDelegate, ObservableObject, CBPeriph
         
         guard let characteristics = service.characteristics else { return }
         
-        // find the relevant peripheral in the list
-//        let index = findPeripheralIndex(peripheral: peripheral)
-    
-//        // update peripheral properties (just for housekpeeing, not functionality)
-//        connectedPeripherals[index].services[service] = characteristics
-//        if service.uuid == ServiceNameToCBUUID["HE_Service"] { //"HE_Service"
-//
-//            print("Found an HE Service")
-//            connectedPeripherals[index].HE_Service = true
-//
-//        }
-        
         for characteristic in characteristics {
             
+            // Print UUID
             print("Characteristic found with UUID: \(characteristic.uuid)")
             
-            if characteristic.uuid == CBUUID(string: "B7779A75-F00A-05B4-147B-ABF02F0D9B16") { //
+            // Print capabilities for read and notify
+            if characteristic.properties.contains(.read) {
+              print("\(characteristic.uuid): properties contains .read")
+            }
+            if characteristic.properties.contains(.notify) {
+              print("\(characteristic.uuid): properties contains .notify")
+            }
+            
+            if characteristic.uuid == CBUUID(string: "b7779a75-f00a-05b4-147b-abf02f0d9b16") { //
                 
                 print("Subscribing to this characteristic")
                 peripheral.setNotifyValue(true, for: characteristic)
-//                connectedPeripherals[index].HE_Charactersitic = characteristic
             }
         }
     }
@@ -268,21 +253,16 @@ class BLEManager: NSObject, CBCentralManagerDelegate, ObservableObject, CBPeriph
         
         print("Peripheral set a value for the characteristic \(characteristic.uuid)")
         
-        if characteristic.uuid == CBUUID(string: "b7779a75-f00a-05b4-147b-abf02f0d9b16") {
-            getHESensorData(from: characteristic)
-        } else {
-            print("Wrong characteristic")
+        switch characteristic.uuid {
+          case ServiceNameToCBUUID["QDG_Service"]:
+            print(characteristic.value ?? "no value")
+            getQDGData(from: characteristic)
+          default:
+            print("Unhandled Characteristic UUID: \(characteristic.uuid)")
         }
-        
-//        print(characteristic.value ?? "No value")
     }
     
-    // Helper function
-    // Unpacks the data from the byte array sent over from the peripheral
-    // Stores it in class variables
-    func getHESensorData(from characteristic: CBCharacteristic) {
-        
-        guard characteristic.value != nil else { return }
+    func getQDGData(from characteristic: CBCharacteristic) {
         
         print("Parsing Message Header")
         
